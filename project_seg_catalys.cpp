@@ -39,62 +39,45 @@ void printcmd()
     fprintf(stderr,"  -save_color: saves the color-coded result as axial images; if the option -overlay is on, the result is superimposed on the original gray values of the images\n\n");
 }
 
-void parcours_objet(VOXEL* voxarg, VOXEL* &first, VOXEL* &last, unsigned char*** buf, int greyin, int greyout, int Larg, int Haut, int Nbcoupe) {
-    int i, j, k;
-    int di, dj, dk;
+void parcours_objet(VOXEL* voxarg, int connex, unsigned char*** &buf, int greyin, int greyout, int Larg, int Haut, int Nbcoupe) {
 
-    i = voxarg->i;
-    j = voxarg->j;
-    k = voxarg->k;
+    VOXEL *fin=NULL, *lin=NULL, *fout=NULL, *lout=NULL;
+    int i, j, k, n;
+    VOXEL *vox=NULL, *vox2=NULL;
 
-    invoxel(voxarg, first, last);
+    vox = new VOXEL(voxarg->i,voxarg->j, voxarg->k, voxarg->eti);
+    assert(vox);
+    invoxel(vox,fin,lin);
 
-    printf("entrée parcours");
+    VOIS *ng=NULL;
+    ng = new VOIS(connex);
 
-    //on parcourt en 4-connexité
+    while(fin!=NULL) {
+        vox = fin;
 
-    for(di=-1;di<2;di++)
-    {
-        if (buf[k][i+di][j] == greyin && i+di>-1 && i+di<Haut) {
-            buf[k][i+di][j] = greyout;
-            VOXEL *temp;
-            temp->i = i+di;
-            temp->j = j;
-            temp->k = k;
-            invoxel(temp,first,last);
-            parcours_objet(temp, first, last, buf, greyin, greyout, Larg, Haut, Nbcoupe);
+        while (vox!=NULL) {
+            for(n=0; n<connex;n++) {
+                i = vox->i+ng->crd[n].i;
+                j = vox->j+ng->crd[n].j;
+                k = vox->k+ng->crd[n].k;
+                if (i>=0 && i<Haut && j>=0 && j<Larg && k>=0 && k<Nbcoupe && buf[k][i][j]==greyin) {
+                    buf[k][i][j] = greyout;
+                    vox2 = new VOXEL(i,j,k,0);
+                    invoxel(vox2,fout,lout);
+                    vox2 = NULL;
+                }
+            }
+            vox=vox->suiv;
+        } //while vox!=NULL
+        freelistevoxel(fin,lin);
+        fin = NULL;
+        lin = NULL;
 
-            printf("parcours di");
-        }
-    }
-    for(dj=-1;dj<2;dj++)
-    {
-        if (buf[k][i][j+dj] == greyin && j+dj>-1 && j+dj<Larg) {
-            buf[k][i][j+dj] = greyout;
-            VOXEL *temp;
-            temp->i = i;
-            temp->j = j+dj;
-            temp->k = k;
-            invoxel(temp, first, last);
-            parcours_objet(temp, first, last, buf, greyin, greyout, Larg, Haut, Nbcoupe);
+        fin = fout; fout = NULL;
+        lin = lout; lout = NULL;
+    } //while fin!=NULL
 
-            printf("parcours dj");
-        }
-    }
-    for(dk=-1;dk<2;dk++)
-    {
-        if (buf[k+dk][i][j] == greyin && k+dk>-1 && k+dk<Nbcoupe) {
-            buf[k+dk][i][j] = greyout;
-            VOXEL *temp;
-            temp->i = i;
-            temp->j = j;
-            temp->k = k+dk;
-            invoxel(temp, first, last);
-            parcours_objet(temp, first, last, buf, greyin, greyout, Larg, Haut, Nbcoupe);
 
-            printf("parcours dk");
-        }
-    }
 }
 
 int  main(int argc,char *argv[])
@@ -694,37 +677,38 @@ int  main(int argc,char *argv[])
     //LEGENDE NIVEAUX DE GRIS
 
     //trou détecté = 128
-    //trou répertorié = 64
+    //trou étiqueté = 64
     //premier voxel de chaque trou = 32
 
 
-    //parcours des trous pour les répertorier
+    //parcours des trous pour les étiqueter
 
-    /*int Ntrou = 0 ;
+    int Ntrou = 0 ;
+
+    VOXEL *premiertrou = NULL;
+    VOXEL *derniertrou = NULL;
+    VOXEL *voxtrou = NULL, *vox1=NULL;
 
     for(k=0; k<Nbcoupe2; k++)
         for(i=0; i<Haut; i++)
             for(j=0; j<Larg; j++) {
                 if (buf0[k][i][j] == 128) {
 
-                    VOXEL *vox;
-                    vox->i=i;
-                    vox->j=j;
-                    vox->k=k;
-                    vox->eti=Ntrou; //on numérote ainsi les trous
-
+                    voxtrou = new VOXEL(i,j,k,Ntrou);
+                    assert(voxtrou);
                     Ntrou++;
+                    invoxel(voxtrou, premiertrou, derniertrou);
 
-                    VOXEL *first(0);
-                    VOXEL *last(0);
+                    vox1 = new VOXEL(i,j,k,Ntrou);
+                    assert(vox1);
+                    parcours_objet(vox1, 26, buf0, 128, 64, Larg, Haut, Nbcoupe2);
 
-                    printf("test 1");
-
-                    parcours_objet(vox, first, last, buf0, 128, 64, Larg, Haut, Nbcoupe2);
+                    voxtrou = NULL;
+                    //stockage pour calcul
 
                     buf0[k][i][j] = 32;
                 }
-            }*/
+            }
 
     //sauvegarde
 
@@ -949,10 +933,8 @@ int  main(int argc,char *argv[])
     {
 
         KIma = new KImage(Larg,Haut);
-        //for(k=0;k<Nbcoupe;k++)
-        for(k=Nsv-1;k<Nsv+2;k++)
+        for(k=0;k<Nbcoupe;k++)
         {
-
             for(i=0;i<Haut;i++)
                 for(j=0;j<Larg;j++)
                 {
@@ -960,31 +942,21 @@ int  main(int argc,char *argv[])
                     {
                         KIma->Buf[i][j].r = KIma->Buf[i][j].g = KIma->Buf[i][j].b = buf1[k+1][i][j];
                     }
-                    else if(buf0[k+1][i][j]>210)
-                    {//objet valide
+                    else if(buf0[k+1][i][j]==128)
+                    {//objet détecté
+                        KIma->Buf[i][j].b = 255;
                         KIma->Buf[i][j].r = 10;
                         KIma->Buf[i][j].g = 10;
-                        KIma->Buf[i][j].b = 210;
                     }
-                    else if(buf0[k+1][i][j]>127)
-                    {//axe objet
-                        KIma->Buf[i][j].r = 255;
-                        KIma->Buf[i][j].g = KIma->Buf[i][j].b = 0;
-                    }
-                    else  if(buf0[k+1][i][j]< 90)
-                    {//objet non valide
-                        KIma->Buf[i][j].r = 210;
-                        KIma->Buf[i][j].g = KIma->Buf[i][j].b = 10;
-                    }
-                    else  if(buf0[k+1][i][j]< 127)
-                    {//axe objet
+                    else if(buf0[k+1][i][j]==64)
+                    {//objet étiqueté
                         KIma->Buf[i][j].g = 255;
                         KIma->Buf[i][j].r = KIma->Buf[i][j].b = 0;
                     }
-                    else
-                    {//centre objet
-                        KIma->Buf[i][j].b = 255;
-                        KIma->Buf[i][j].r = KIma->Buf[i][j].g = 0;
+                    else  if(buf0[k+1][i][j]==32)
+                    {//premier voxel des trous
+                        KIma->Buf[i][j].r = 210;
+                        KIma->Buf[i][j].g = KIma->Buf[i][j].b = 10;
                     }
                 }
             nom[0]='\0';
