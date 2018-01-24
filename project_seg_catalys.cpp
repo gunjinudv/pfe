@@ -700,7 +700,7 @@ int  main(int argc,char *argv[])
 
     //parcours des trous pour les répertorier
 
-    int Ntrou = 0 ;
+    /*int Ntrou = 0 ;
 
     for(k=0; k<Nbcoupe2; k++)
         for(i=0; i<Haut; i++)
@@ -724,7 +724,7 @@ int  main(int argc,char *argv[])
 
                     buf0[k][i][j] = 32;
                 }
-            }
+            }*/
 
     //sauvegarde
 
