@@ -44,12 +44,13 @@ void parcours_objet(VOXEL* voxarg, int connex, unsigned char*** &buf, int greyin
     VOXEL *fin=NULL, *lin=NULL, *fout=NULL, *lout=NULL, *ftrou=NULL, *ltrou=NULL;
     int i, j, k, n;
     int N=0;
-    VOXEL *vox=NULL, *vox2=NULL;
+    VOXEL *vox=NULL, *vox2=NULL, *vox3=NULL;
     COORDINATES *coordinates1 = NULL;
 
     vox = new VOXEL(voxarg->i,voxarg->j, voxarg->k, voxarg->eti);
     assert(vox);
     invoxel(vox,fin,lin);
+    double maxdir[3];
 
     VOIS *ng=NULL;
     ng = new VOIS(connex);
@@ -58,34 +59,40 @@ void parcours_objet(VOXEL* voxarg, int connex, unsigned char*** &buf, int greyin
         vox = fin;
 
         while (vox!=NULL) {
-            for(n=0; n<connex;n++) {
+            for(n=0; n<ng->Nbvois;n++) {
                 i = vox->i+ng->crd[n].i;
                 j = vox->j+ng->crd[n].j;
                 k = vox->k+ng->crd[n].k;
                 if (i>=0 && i<Haut && j>=0 && j<Larg && k>=0 && k<Nbcoupe && buf[k][i][j]==greyin) {
                     buf[k][i][j] = greyout;
                     vox2 = new VOXEL(i,j,k,0);
+                    assert(vox2);
+                    vox3 = new VOXEL(i,j,k,0);
+                    assert(vox3);
                     invoxel(vox2,fout,lout);
-                    invoxel(vox2,ftrou,ltrou);
+                    invoxel(vox3,ftrou,ltrou);
                     N++;
-                    vox2 = NULL;
+                    vox2 = NULL; vox3 = NULL;
                 }
             }
             vox=vox->suiv;
         } //while vox!=NULL
         freelistevoxel(fin,lin);
-        fin = NULL;
-        lin = NULL;
+
         fin = fout; fout = NULL;
         lin = lout; lout = NULL;
     } //while fin!=NULL
 
     //calcul des composantes principales
-    double** mat_vp;
-    double* val_pr;
+    double** mat_vp=NULL;
+    double* val_pr=NULL;
     double moyx=0, moyy=0, moyz=0;
-    prin_comp_analisys(ftrou,mat_vp,val_pr,moyx,moyy,moyz,N);
-    coordinates = new COORDINATES(moyx,moyy,moyz,val_pr[getMaxPos(val_pr,3)],mat_vp[0],0);
+    prin_comp_analisys(ftrou,mat_vp,val_pr,moyx,moyy,moyz);
+    i=getMaxPos(val_pr,3);
+    maxdir[0]=mat_vp[0][i];
+    maxdir[1]=mat_vp[1][i];
+    maxdir[2]=mat_vp[2][i];
+    coordinates = new COORDINATES(moyx,moyy,moyz,val_pr[i],maxdir,N);
     //fin calcul composantes
 
     freelistevoxel(ftrou,ltrou);
@@ -705,6 +712,7 @@ int  main(int argc,char *argv[])
     VOXEL *voxtrou = NULL, *vox1=NULL;
     COORDINATES *fcoordinates = NULL, *lcoordinates = NULL;
     COORDINATES *coordinates = NULL;
+    int ic=0, jc=0, kc=0;
 
     for(k=0; k<Nbcoupe2; k++)
         for(i=0; i<Haut; i++)
@@ -719,11 +727,19 @@ int  main(int argc,char *argv[])
                     vox1 = new VOXEL(i,j,k,Ntrou);
                     assert(vox1);
                     parcours_objet(vox1, 26, buf0, 128, 64, Larg, Haut, Nbcoupe2, coordinates);
-
+                    incoordinates(coordinates,fcoordinates,lcoordinates);
+                    kc = int (-coordinates->z + 0.5);
+                    ic = int (coordinates->x + 0.5);
+                    jc = int (coordinates->y + 0.5);
+                    buf0[kc][ic][jc] = 16;
+                    delete vox1; vox1=NULL;
+                    coordinates = NULL;
                     voxtrou = NULL;
 
-                    buf0[k][i][j] = 32; //colorier premier voxel
-                    //buf0[int (coordinates->z + 0.5)][int (coordinates->x + 0.5)][int (coordinates->y + 0.5)] = 16;
+                    //fprintf(stderr,"found: i=%d,j=%d,k=%d\n",i,j,k);
+
+                    //buf0[k][i][j] = 32; //colorier premier voxel
+
 
                 }
             }
@@ -745,7 +761,38 @@ int  main(int argc,char *argv[])
 
     COORDINATES *param=NULL, *f_parok=NULL, *l_parok=NULL,*f_parwr=NULL, *l_parwr=NULL;
 
+    COORDINATES *parameters=NULL;
+//f_parameter, *l_parameter sont mis à jour lors de la detection d'objets;
 
+// write in file the center coordinates and direction of the objects
+    pub[0]='\0';
+    sprintf(pub,"Objects_center_pix_and_orientation_cascade%d.txt%c",1,'\0');
+    id = ouvert_fic(pub,"w");
+
+    fprintf(id,"\n Center coordinates pixels: x\ty\tz\t Orientation (3 coordinates): x\ty\tz\t Volume \n");
+
+    parameters = fcoordinates;
+    i=0;
+    while(parameters != NULL)
+    {
+        i++;
+        fprintf(id," %g; %g; %g; \t %g; %g; %g; ",parameters->x,parameters->y,parameters->z,parameters->max_dir[0],parameters->max_dir[1],parameters->max_dir[2]);
+        fprintf(id,"\t\t %d \n",parameters->vol);
+        parameters=parameters->suiv;
+    }
+    fprintf(id,"Total number of objects: %d",i);
+    fclose(id);
+
+    parameters = fcoordinates;
+    fprintf(stderr,"Toto\n");
+    i=0;
+    while(parameters != NULL)
+    {
+        i++;
+       draw_cylindre(buf0,parameters,6.1,20,Haut,Larg,Nbcoupe2);
+        fprintf(stderr,"point %d     \r",i);
+        parameters=parameters->suiv;
+    }
 
     //read text file
     /*char chx[50],chy[50],chz[50],chdx[50],chdy[50],chdz[50];
@@ -978,6 +1025,16 @@ int  main(int argc,char *argv[])
                     }
                     else  if(buf0[k+1][i][j]==16)
                     {//centre des trous
+                        KIma->Buf[i][j].b = 255;
+                        KIma->Buf[i][j].g = KIma->Buf[i][j].r = 0;
+                    }
+                    else  if(buf0[k+1][i][j]==100)
+                    {//
+                        KIma->Buf[i][j].r = 255;
+                        KIma->Buf[i][j].g = KIma->Buf[i][j].b = 0;
+                    }
+                    else  if(buf0[k+1][i][j]==110)
+                    {//extérieur
                         KIma->Buf[i][j].b = 255;
                         KIma->Buf[i][j].g = KIma->Buf[i][j].r = 0;
                     }

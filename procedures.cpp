@@ -346,13 +346,13 @@ void permute(double* &a,int i,int j)
 
 
 
-double prin_comp_analisys(VOXEL* in_first, double** &mat_vp, double* &val_pr,double &moyx,double &moyy,double &moyz, int &N)
+double prin_comp_analisys(VOXEL* in_first, double** &mat_vp, double* &val_pr,double &moyx,double &moyy,double &moyz)
 {
 	VOXEL *vox=NULL;
 	int i;
 	//double moyx=0.0, moyy=0.0, moyz=0.0;
 
-
+    int N=0;
 	vox = in_first;
 	while(vox != NULL)
 	{
@@ -428,6 +428,105 @@ int getMaxPos(double *vp,int size)
 		}
 	}
 	return max_pos;
+}
+
+
+void draw_cylindre(unsigned char*** &buf, COORDINATES *pt, double rad,double len, int H, int L, int N)
+{
+
+    double x0=pt->x;
+    double y0=pt->y;
+    double z0=pt->z;
+    int i,j,k ;
+    double dx,dy,dz ;
+    dx=pt->max_dir[0] ;
+    dy=pt->max_dir[1] ;
+    dz=pt->max_dir[2] ;
+    double norm;
+    norm=sqrt(pow(dx,2)+pow(dy,2)+pow(dz,2));
+
+    if(norm=!0.0)
+    {
+        dx=dx/norm;
+        dy=dy/norm;
+        dz=dz/norm;
+    }
+
+    double md ;
+    double l ;
+    l=len;
+    md=max(fabs(dx),max(fabs(dy),fabs(dz)));
+
+    double x,y,z ;
+    for (int n=-l;n<=l;n++)
+    {
+        x=x0+n*dx/md ;
+        y=y0+n*dy/md ;
+        z=z0+n*dz/md ;
+
+        if (x>=H || y>=L || -z>=N || x<0 || y<0 || z>0)
+        {
+            continue;
+        }
+        i=(int)floor(x+0.5);
+        j=(int)floor(y+0.5);
+        k=(int)floor(-z+0.5);
+
+        if (i>=H || j>=L || k>=N || i<0 || j<0 || k<0)
+        {
+            continue;
+        }
+        buf[k][i][j]=100 ;
+
+    }
+
+
+    double r ;
+    r=rad ;
+    int d;
+    d=1+(int)floor(sqrt(r*r+ l*l));
+    double L1,L2,D;
+
+    //fprintf(stderr,"d=%d\n",d);
+
+    for (int u=-d;u<=d;u++)
+    {
+        for (int v=-d; v<=d; v++)
+        {
+            for (int w=-d; w<=d; w++)
+            {
+                x=x0+u ;
+                y=y0+v ;
+                z=z0+w ;
+
+                if (x>=H || y>=L || -z>=N || x<0 || y<0 || z>0)
+                {
+                    continue;
+                }
+
+                L1=u*(dx)+ v*(dy)+w*(dz);
+                L2=sqrt((double)u*u+(double)v*v+(double)w*w);
+                D=sqrt(pow(L2,2)-pow(L1,2));
+
+
+                if ((r-0.9)< D && D<(r+0.9))
+                {
+                    i=(int)floor(x+0.5);
+                    j=(int)floor(y+0.5);
+                    k=(int)floor(-z+0.5);
+
+                    if (i>=H || j>=L || k>=N || i<0 || j<0 || k<0)
+                    {
+                        continue;
+                    }
+                    //fprintf(stderr,"point ...");
+                    buf[k][i][j]=110 ;
+                }
+            }
+        }
+    }
+
+
 }
 
 
