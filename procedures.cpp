@@ -348,12 +348,12 @@ void permute(double* &a,int i,int j)
 
 double prin_comp_analisys(VOXEL* in_first, double** &mat_vp, double* &val_pr,double &moyx,double &moyy,double &moyz, int &N)
 {
-	VOXEL *vox;
+	VOXEL *vox=NULL;
 	int i;
 	//double moyx=0.0, moyy=0.0, moyz=0.0;
 
-	
-	vox = in_first; 
+
+	vox = in_first;
 	while(vox != NULL)
 	{
 	  N++;
@@ -390,7 +390,7 @@ double prin_comp_analisys(VOXEL* in_first, double** &mat_vp, double* &val_pr,dou
     
 	double lp1, lp2, lp3;//estimation des longueurs des axes par les valeurs principales sous forme statistique 3*sigma = 3* sqrt(val_propre)
     
-	//ordonnement  (attn: uniquement val propres; il faudrait faire la même chose pour les vect propres)
+	//ordonnement  (attn: uniquement val propres; il faudrait faire la mï¿½me chose pour les vect propres)
 	/*
 	if(val_pr[0] > val_pr[2])
 	  permute(val_pr,0,2);

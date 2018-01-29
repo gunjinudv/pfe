@@ -39,11 +39,13 @@ void printcmd()
     fprintf(stderr,"  -save_color: saves the color-coded result as axial images; if the option -overlay is on, the result is superimposed on the original gray values of the images\n\n");
 }
 
-void parcours_objet(VOXEL* voxarg, int connex, unsigned char*** &buf, int greyin, int greyout, int Larg, int Haut, int Nbcoupe) {
+void parcours_objet(VOXEL* voxarg, int connex, unsigned char*** &buf, int greyin, int greyout, int Larg, int Haut, int Nbcoupe, COORDINATES* &coordinates) {
 
-    VOXEL *fin=NULL, *lin=NULL, *fout=NULL, *lout=NULL;
+    VOXEL *fin=NULL, *lin=NULL, *fout=NULL, *lout=NULL, *ftrou=NULL, *ltrou=NULL;
     int i, j, k, n;
+    int N=0;
     VOXEL *vox=NULL, *vox2=NULL;
+    COORDINATES *coordinates1 = NULL;
 
     vox = new VOXEL(voxarg->i,voxarg->j, voxarg->k, voxarg->eti);
     assert(vox);
@@ -64,6 +66,8 @@ void parcours_objet(VOXEL* voxarg, int connex, unsigned char*** &buf, int greyin
                     buf[k][i][j] = greyout;
                     vox2 = new VOXEL(i,j,k,0);
                     invoxel(vox2,fout,lout);
+                    invoxel(vox2,ftrou,ltrou);
+                    N++;
                     vox2 = NULL;
                 }
             }
@@ -72,11 +76,21 @@ void parcours_objet(VOXEL* voxarg, int connex, unsigned char*** &buf, int greyin
         freelistevoxel(fin,lin);
         fin = NULL;
         lin = NULL;
-
         fin = fout; fout = NULL;
         lin = lout; lout = NULL;
     } //while fin!=NULL
 
+    //calcul des composantes principales
+    double** mat_vp;
+    double* val_pr;
+    double moyx=0, moyy=0, moyz=0;
+    prin_comp_analisys(ftrou,mat_vp,val_pr,moyx,moyy,moyz,N);
+    coordinates = new COORDINATES(moyx,moyy,moyz,val_pr[getMaxPos(val_pr,3)],mat_vp[0],0);
+    //fin calcul composantes
+
+    freelistevoxel(ftrou,ltrou);
+    ftrou = NULL;
+    ltrou = NULL;
 
 }
 
@@ -679,6 +693,7 @@ int  main(int argc,char *argv[])
     //trou détecté = 128
     //trou étiqueté = 64
     //premier voxel de chaque trou = 32
+    //milieu des trous = 16
 
 
     //parcours des trous pour les étiqueter
@@ -688,6 +703,8 @@ int  main(int argc,char *argv[])
     VOXEL *premiertrou = NULL;
     VOXEL *derniertrou = NULL;
     VOXEL *voxtrou = NULL, *vox1=NULL;
+    COORDINATES *fcoordinates = NULL, *lcoordinates = NULL;
+    COORDINATES *coordinates = NULL;
 
     for(k=0; k<Nbcoupe2; k++)
         for(i=0; i<Haut; i++)
@@ -701,12 +718,13 @@ int  main(int argc,char *argv[])
 
                     vox1 = new VOXEL(i,j,k,Ntrou);
                     assert(vox1);
-                    parcours_objet(vox1, 26, buf0, 128, 64, Larg, Haut, Nbcoupe2);
+                    parcours_objet(vox1, 26, buf0, 128, 64, Larg, Haut, Nbcoupe2, coordinates);
 
                     voxtrou = NULL;
-                    //stockage pour calcul
 
-                    buf0[k][i][j] = 32;
+                    buf0[k][i][j] = 32; //colorier premier voxel
+                    //buf0[int (coordinates->z + 0.5)][int (coordinates->x + 0.5)][int (coordinates->y + 0.5)] = 16;
+
                 }
             }
 
@@ -944,9 +962,9 @@ int  main(int argc,char *argv[])
                     }
                     else if(buf0[k+1][i][j]==128)
                     {//objet détecté
-                        KIma->Buf[i][j].b = 255;
-                        KIma->Buf[i][j].r = 10;
-                        KIma->Buf[i][j].g = 10;
+                        KIma->Buf[i][j].b = 128;
+                        KIma->Buf[i][j].r = 128;
+                        KIma->Buf[i][j].g = 128;
                     }
                     else if(buf0[k+1][i][j]==64)
                     {//objet étiqueté
@@ -955,8 +973,13 @@ int  main(int argc,char *argv[])
                     }
                     else  if(buf0[k+1][i][j]==32)
                     {//premier voxel des trous
-                        KIma->Buf[i][j].r = 210;
-                        KIma->Buf[i][j].g = KIma->Buf[i][j].b = 10;
+                        KIma->Buf[i][j].r = 255;
+                        KIma->Buf[i][j].g = KIma->Buf[i][j].b = 0;
+                    }
+                    else  if(buf0[k+1][i][j]==16)
+                    {//centre des trous
+                        KIma->Buf[i][j].b = 255;
+                        KIma->Buf[i][j].g = KIma->Buf[i][j].r = 0;
                     }
                 }
             nom[0]='\0';
