@@ -789,10 +789,42 @@ int  main(int argc,char *argv[])
     while(parameters != NULL)
     {
         i++;
-       draw_cylindre(buf0,parameters,6.1,20,Haut,Larg,Nbcoupe2);
+        draw_cylindre(buf0,parameters,6.1,20,Haut,Larg,Nbcoupe2);
         fprintf(stderr,"point %d     \r",i);
         parameters=parameters->suiv;
     }
+
+    //calcul gradients à partir des images originales
+
+    /*for(k=1; k<Nbcoupe2-1; k++)
+        for(i=1; i<Haut-1; i++)
+            for(j=1; j<Larg-1; j++) {
+                int temp = (buf1[k+1][i][j] - buf1[k-1][i][j])/2 + (buf1[k][i+1][j] - buf1[k][i-1][j])/2 + (buf1[k][i][j+1] - buf1[k][i][j-1])/2;
+                if (temp > 255) {
+                    buf3[k][i][j] = 255;
+                }
+                else {
+                    buf3[k][i][j] = temp;
+                }
+            }
+
+    parameters = fcoordinates;
+    while(parameters != NULL)
+    {
+        draw_cylindre(buf0,parameters,6.1,20,Haut,Larg,Nbcoupe2);
+        parameters=parameters->suiv;
+    }
+
+    for(k=0;k<Nbcoupe;k++) {
+
+        nom[0] = '\0';
+        sprintf(format, "%s%d%s%c", "%s%0", repr, "d%s%c", '\0');
+        sprintf("gr_", nom, format, base, start + step * k, "_grad.pgm", '\0');
+        fprintf(stderr, "\rSave coupe: %d (real: %s)  ", k, nom);
+        save_coupe(buf3[k + 1], Larg, Haut, nom);
+    }*/
+
+
 
     //read text file
     /*char chx[50],chy[50],chz[50],chdx[50],chdy[50],chdz[50];
@@ -1068,7 +1100,7 @@ int  main(int argc,char *argv[])
     fprintf(stderr,"Memory free ...");
     mat3Dfree((void***&)buf0,Nbcoupe2,Haut,Larg);
     mat3Dfree((void***&)buf1,Nbcoupe2,Haut,Larg);
-    //mat3Dfree((void***&)buf2,Nbcoupe2,Haut,Larg);
+    mat3Dfree((void***&)buf2,Nbcoupe2,Haut,Larg);
 
 
 
