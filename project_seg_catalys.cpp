@@ -766,7 +766,7 @@ int  main(int argc,char *argv[])
 
 // write in file the center coordinates and direction of the objects
     pub[0]='\0';
-    sprintf(pub,"Objects_center_pix_and_orientation_cascade%d.txt%c",1,'\0');
+    sprintf(pub,"Objects_volume%d.txt%c",1,'\0');
     id = ouvert_fic(pub,"w");
 
     fprintf(id,"\n Center coordinates pixels: x\ty\tz\t Orientation (3 coordinates): x\ty\tz\t Volume \n");
@@ -776,7 +776,7 @@ int  main(int argc,char *argv[])
     while(parameters != NULL)
     {
         i++;
-        fprintf(id," %g; %g; %g; \t %g; %g; %g; ",parameters->x,parameters->y,parameters->z,parameters->max_dir[0],parameters->max_dir[1],parameters->max_dir[2]);
+        //fprintf(id," %g; %g; %g; \t %g; %g; %g; ",parameters->x,parameters->y,parameters->z,parameters->max_dir[0],parameters->max_dir[1],parameters->max_dir[2]);
         fprintf(id,"\t\t %d \n",parameters->vol);
         parameters=parameters->suiv;
     }
@@ -795,11 +795,19 @@ int  main(int argc,char *argv[])
     }
 
     //calcul gradients à partir des images originales
-
-    /*for(k=1; k<Nbcoupe2-1; k++)
+    for(k=0;k<Nbcoupe2;k++)
+        for(i=0;i<Haut;i++)
+            for(j=0;j<Larg;j++)
+            {
+                if(buf1[k][i][j]>200)
+                    buf2[k][i][j]=255;
+                else
+                    buf2[k][i][j]=0;
+            }
+    for(k=1; k<Nbcoupe2-1; k++)
         for(i=1; i<Haut-1; i++)
             for(j=1; j<Larg-1; j++) {
-                int temp = (buf1[k+1][i][j] - buf1[k-1][i][j])/2 + (buf1[k][i+1][j] - buf1[k][i-1][j])/2 + (buf1[k][i][j+1] - buf1[k][i][j-1])/2;
+                int temp = (buf2[k+1][i][j] - buf2[k-1][i][j])/2 + (buf2[k][i+1][j] - buf2[k][i-1][j])/2 + (buf2[k][i][j+1] - buf2[k][i][j-1])/2;
                 if (temp > 255) {
                     buf3[k][i][j] = 255;
                 }
@@ -811,18 +819,9 @@ int  main(int argc,char *argv[])
     parameters = fcoordinates;
     while(parameters != NULL)
     {
-        draw_cylindre(buf0,parameters,6.1,20,Haut,Larg,Nbcoupe2);
+        draw_cylindre(buf3,parameters,6.1,19,Haut,Larg,Nbcoupe2);
         parameters=parameters->suiv;
     }
-
-    for(k=0;k<Nbcoupe;k++) {
-
-        nom[0] = '\0';
-        sprintf(format, "%s%d%s%c", "%s%0", repr, "d%s%c", '\0');
-        sprintf("gr_", nom, format, base, start + step * k, "_grad.pgm", '\0');
-        fprintf(stderr, "\rSave coupe: %d (real: %s)  ", k, nom);
-        save_coupe(buf3[k + 1], Larg, Haut, nom);
-    }*/
 
 
 
@@ -1026,7 +1025,7 @@ int  main(int argc,char *argv[])
         pub[endptr-pub]='\0';
 
 
-    if(save_color)
+    /*if(save_color)
     {
 
         KIma = new KImage(Larg,Haut);
@@ -1081,6 +1080,48 @@ int  main(int argc,char *argv[])
             {
                 sprintf(format,"%s%d%s%c","%s%0",repr,"d%s%c",'\0');
                 sprintf(nom,format,base,start + step*k,"_coloraxis.ppm",'\0');
+            }
+            fprintf(stderr,"\rSave coupe: %d (real: %s)  ",k,nom);
+            id = ouvert_fic(nom,"wb");
+            KIma->save_image_color(id,info_null);
+            fclose(id);
+        }
+
+        delete KIma;
+    }*/
+
+    if(save_color) //buf3 gradients uniquement
+    {
+
+        KIma = new KImage(Larg,Haut);
+        for(k=0;k<Nbcoupe;k++)
+        {
+            for(i=0;i<Haut;i++)
+                for(j=0;j<Larg;j++)
+                {
+                    if(buf3[k+1][i][j]==0 || buf3[k+1][i][j]==255)
+                    {
+                        KIma->Buf[i][j].r = KIma->Buf[i][j].g = KIma->Buf[i][j].b = buf3[k+1][i][j];
+                    }
+                    else  if(buf3[k+1][i][j]==100)
+                    {//
+                        KIma->Buf[i][j].r = 255;
+                    }
+                    else  if(buf3[k+1][i][j]==110)
+                    {//extérieur
+                        KIma->Buf[i][j].b = 255;
+                    }
+                }
+            nom[0]='\0';
+            if(pub[0]!='\0')
+            {
+                sprintf(format,"%s%d%s%c","%s%0",repr,"d%s%s%c",'\0');
+                sprintf(nom,format,base,start + step*k,pub,"_grad.ppm",'\0');
+            }
+            else
+            {
+                sprintf(format,"%s%d%s%c","%s%0",repr,"d%s%c",'\0');
+                sprintf(nom,format,base,start + step*k,"_grad.ppm",'\0');
             }
             fprintf(stderr,"\rSave coupe: %d (real: %s)  ",k,nom);
             id = ouvert_fic(nom,"wb");
